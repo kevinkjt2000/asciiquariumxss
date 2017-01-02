@@ -1,0 +1,59 @@
+#!/usr/bin/env python
+#
+# Copyright 2017 Timothy R. Chavez <timrchavez@gmail.com>
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import gtk
+import os
+import vte
+
+from gtk import gdk
+
+
+def main():
+    window = gtk.Window()
+
+    term = vte.Terminal()
+    term.connect ("child-exited", lambda term: gtk.main_quit())
+    term.fork_command("asciiquarium")
+    term.set_emulation('xterm')
+    term.show()
+
+    xss_window_id = os.environ.get("XSCREENSAVER_WINDOW")
+    if xss_window_id:
+        window.window = gdk.window_foreign_new(int(xss_window_id, 16))
+        window.window.set_events(gdk.EXPOSURE_MASK | gdk.STRUCTURE_MASK)
+        x, y, w, h, depth = window.window.get_geometry()
+        window.size_allocate(gdk.Rectangle(x, y, w, h))
+        window.set_default_size(w, h)
+        window.set_decorated(False)
+        window.window.set_user_data(window)
+        window.style.attach(window.window)
+    else:
+        window.window = gdk.Window(
+            None, 1024, 768, gdk.WINDOW_TOPLEVEL,
+            (gdk.EXPOSURE_MASK | gdk.STRUCTURE_MASK),
+            gdk.INPUT_OUTPUT)
+    window.set_flags(window.flags() | gtk.REALIZED)
+    window.connect('delete-event', gtk.main_quit)
+    window.realize()
+    window.modify_bg(gtk.STATE_NORMAL, gdk.color_parse("black"))
+    window.add(term)
+    window.show()
+
+    gtk.main()
+
+
+if __name__ == '__main__':
+    main()
